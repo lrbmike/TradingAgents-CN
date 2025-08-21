@@ -211,44 +211,48 @@ class FinancialSituationMemory:
                         self.client = "DISABLED"
                         logger.info(f"🚨 未找到可用的嵌入服务，内存功能已禁用")
         elif self.llm_provider == "google":
-            # Google AI使用阿里百炼嵌入（如果可用），否则禁用记忆功能
-            dashscope_key = os.getenv('DASHSCOPE_API_KEY')
-            openai_key = os.getenv('OPENAI_API_KEY')
-            
-            if dashscope_key:
-                try:
-                    # 尝试初始化DashScope
-                    import dashscope
-                    from dashscope import TextEmbedding
+            self.embedding = "models/gemini-embedding-001"
 
-                    self.embedding = "text-embedding-v3"
-                    self.client = None
-                    dashscope.api_key = dashscope_key
+            self.client = None
+
+            # # Google AI使用阿里百炼嵌入（如果可用），否则禁用记忆功能
+            # dashscope_key = os.getenv('DASHSCOPE_API_KEY')
+            # openai_key = os.getenv('OPENAI_API_KEY')
+            
+            # if dashscope_key:
+            #     try:
+            #         # 尝试初始化DashScope
+            #         import dashscope
+            #         from dashscope import TextEmbedding
+
+            #         self.embedding = "text-embedding-v3"
+            #         self.client = None
+            #         dashscope.api_key = dashscope_key
                     
-                    # 检查是否有OpenAI密钥作为降级选项
-                    if openai_key:
-                        logger.info(f"💡 Google AI使用阿里百炼嵌入服务（OpenAI作为降级选项）")
-                        self.fallback_available = True
-                        self.fallback_client = OpenAI(api_key=openai_key, base_url=config["backend_url"])
-                        self.fallback_embedding = "text-embedding-3-small"
-                    else:
-                        logger.info(f"💡 Google AI使用阿里百炼嵌入服务（无降级选项）")
-                        self.fallback_available = False
+            #         # 检查是否有OpenAI密钥作为降级选项
+            #         if openai_key:
+            #             logger.info(f"💡 Google AI使用阿里百炼嵌入服务（OpenAI作为降级选项）")
+            #             self.fallback_available = True
+            #             self.fallback_client = OpenAI(api_key=openai_key, base_url=config["backend_url"])
+            #             self.fallback_embedding = "text-embedding-3-small"
+            #         else:
+            #             logger.info(f"💡 Google AI使用阿里百炼嵌入服务（无降级选项）")
+            #             self.fallback_available = False
                         
-                except ImportError as e:
-                    logger.error(f"❌ DashScope包未安装: {e}")
-                    self.client = "DISABLED"
-                    logger.warning(f"⚠️ Google AI记忆功能已禁用")
-                except Exception as e:
-                    logger.error(f"❌ DashScope初始化失败: {e}")
-                    self.client = "DISABLED"
-                    logger.warning(f"⚠️ Google AI记忆功能已禁用")
-            else:
-                # 没有DashScope密钥，禁用记忆功能
-                self.client = "DISABLED"
-                self.fallback_available = False
-                logger.warning(f"⚠️ Google AI未找到DASHSCOPE_API_KEY，记忆功能已禁用")
-                logger.info(f"💡 系统将继续运行，但不会保存或检索历史记忆")
+            #     except ImportError as e:
+            #         logger.error(f"❌ DashScope包未安装: {e}")
+            #         self.client = "DISABLED"
+            #         logger.warning(f"⚠️ Google AI记忆功能已禁用")
+            #     except Exception as e:
+            #         logger.error(f"❌ DashScope初始化失败: {e}")
+            #         self.client = "DISABLED"
+            #         logger.warning(f"⚠️ Google AI记忆功能已禁用")
+            # else:
+            #     # 没有DashScope密钥，禁用记忆功能
+            #     self.client = "DISABLED"
+            #     self.fallback_available = False
+            #     logger.warning(f"⚠️ Google AI未找到DASHSCOPE_API_KEY，记忆功能已禁用")
+            #     logger.info(f"💡 系统将继续运行，但不会保存或检索历史记忆")
         elif self.llm_provider == "openrouter":
             # OpenRouter支持：优先使用阿里百炼嵌入，否则禁用记忆功能
             dashscope_key = os.getenv('DASHSCOPE_API_KEY')
@@ -382,7 +386,7 @@ class FinancialSituationMemory:
 
         if (self.llm_provider == "dashscope" or
             self.llm_provider == "alibaba" or
-            (self.llm_provider == "google" and self.client is None) or
+            # (self.llm_provider == "google" and self.client is None) or
             (self.llm_provider == "deepseek" and self.client is None) or
             (self.llm_provider == "openrouter" and self.client is None)):
             # 使用阿里百炼的嵌入模型
@@ -474,6 +478,28 @@ class FinancialSituationMemory:
                 
                 logger.warning(f"⚠️ 记忆功能降级，返回空向量")
                 return [0.0] * 1024
+        elif self.llm_provider == "google":
+            # 使用硅基的api
+            from langchain_openai import OpenAIEmbeddings
+
+            embeddings = OpenAIEmbeddings(model="BAAI/bge-m3", openai_api_key=os.getenv("SILICONFLOW_API_KEY"), openai_api_base=os.getenv("SILICONFLOW_BASE_URL"))
+
+            vector = embeddings.embed_query(text)
+            logger.debug(f"✅ GoogleOpenAI embedding成功，维度: {len(vector)}")
+
+            return vector
+
+            # from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+            # if os.getenv("GOOGLE_BASE_URL"):
+            #     embeddings = GoogleGenerativeAIEmbeddings(model=self.embedding, google_api_key=os.getenv("GOOGLE_API_KEY"), transport="rest", client_options={"api_endpoint": os.getenv("GOOGLE_BASE_URL")})
+            # else:
+            #     embeddings = GoogleGenerativeAIEmbeddings(model=self.embedding, google_api_key=os.getenv("GOOGLE_API_KEY"))
+
+            # vector = embeddings.embed_query(text)
+            # logger.debug(f"✅ Google embedding成功，维度: {len(vector)}")
+            # return vector
+
         else:
             # 使用OpenAI兼容的嵌入模型
             if self.client is None:

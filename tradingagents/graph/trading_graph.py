@@ -123,13 +123,13 @@ class TradingAgentsGraph:
                 raise ValueError("使用Google AI需要设置GOOGLE_API_KEY环境变量")
             
             self.deep_thinking_llm = ChatGoogleOpenAI(
-                model=self.config["deep_think_llm"],
+                model="gemini-2.5-pro",
                 google_api_key=google_api_key,
                 temperature=0.1,
                 max_tokens=2000
             )
             self.quick_thinking_llm = ChatGoogleOpenAI(
-                model=self.config["quick_think_llm"],
+                model="gemini-2.5-flash",
                 google_api_key=google_api_key,
                 temperature=0.1,
                 max_tokens=2000

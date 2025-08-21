@@ -41,6 +41,13 @@ class ChatGoogleOpenAI(ChatGoogleGenerativeAI):
             )
         
         kwargs["google_api_key"] = google_api_key
+
+        # 自定义 api_endpoint
+        api_endpoint = kwargs.get("google_base_url") or os.getenv("GOOGLE_BASE_URL")
+        print("google ai api_endpoint:", api_endpoint)
+        if api_endpoint:
+            kwargs["transport"] = "rest" # 需要使用 rest 方式
+            kwargs["client_options"] = {"api_endpoint": api_endpoint}
         
         # 调用父类初始化
         super().__init__(**kwargs)
